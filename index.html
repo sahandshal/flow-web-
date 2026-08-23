@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="flow — بازار تصویری ایران. محصول را ببین، همان‌جا سفارش بده.">
+<meta name="theme-color" content="#0A0A0B">
+<title>flow</title>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     🔴 TODO — نشانی نسخهٔ وب (PWA)
+     مقدار APP_URL انتهای این فایل و همهٔ href های `data-app-link` روی یک
+     placeholder ثابت‌اند: https://app.example.com/
+     دامنهٔ واقعی که تعیین شد، فقط ثابت APP_URL در <script> را عوض کن — همهٔ
+     لینک‌ها موقع لود از همان یک‌جا بازنویسی می‌شوند. href داخل HTML هم برای
+     حالت «جاوااسکریپت خاموش» باید همان مقدار را بگیرد (جست‌وجوی ساده کافی است).
+     ⚠️ هرگز آدرس ماشین محلی (sahands-macbook-pro.local) برنگردد — روی اینترنت
+     برای هیچ‌کس باز نمی‌شود.
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<!-- فونت دیگر base64 نیست: صفحه از ~۱MB به ~۳۵KB HTML رسید و فونت‌ها بین
+     بازدیدها کش می‌شوند. فقط ۴۰۰ و ۷۰۰ preload می‌شوند چون بالای fold همین دو
+     وزن دیده می‌شود؛ ۶۰۰ با swap دیرتر می‌آید و پرشِ محسوسی ندارد. -->
+<!-- حالت‌های «هنوز ظاهر نشده» فقط وقتی اعمال می‌شوند که جاوااسکریپت هست تا
+     دوباره روشنشان کند. بدون این گیت، با JS خاموش کل صفحه opacity:0 می‌ماند و
+     بیننده یک صفحهٔ سیاه می‌بیند. اسکریپت هم‌زمان و در <head> است، پس هیچ
+     پرشی (FOUC) ندارد. -->
+<script>document.documentElement.className+=' js'</script>
+<link rel="preload" href="fonts/vazirmatn-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/vazirmatn-700.woff2" as="font" type="font/woff2" crossorigin>
+
+<style>
+@font-face{font-family:'Vazirmatn';font-style:normal;font-weight:400;font-display:swap;
+  src:url(fonts/vazirmatn-400.woff2) format('woff2')}
+@font-face{font-family:'Vazirmatn';font-style:normal;font-weight:600;font-display:swap;
+  src:url(fonts/vazirmatn-600.woff2) format('woff2')}
+@font-face{font-family:'Vazirmatn';font-style:normal;font-weight:700;font-display:swap;
+  src:url(fonts/vazirmatn-700.woff2) format('woff2')}
+
+/* ─── Tokens ────────────────────────────────────────────────────────────────
+   عیناً از mobile/src/theme/index.ts. نسخهٔ قبلی عمداً روشن بود («اپ تیره است،
+   پس هر اسکرین‌شات مثل شیء نورانی روی کاغذ خوانده می‌شود»). آن استدلال درست
+   بود ولی سایت باید تم خودِ اپ را داشته باشد؛ جبرانش این است که هر ماکاپ یک
+   هالهٔ برند پشت خودش دارد و اسکرین‌شات‌ها خودشان عکس روشن پرکنتراست‌اند.   */
+:root{
+  --bg:#0A0A0B; --surface:#131316; --raised:#1C1C20;
+  --border:#27272C; --divider:#38383F;
+  --text:#F5F5F7; --text-2:#A8A8AD; --text-3:#8E8E95; --text-4:#44444A;
+  --brand:#FF2D55; --brand-2:#FF5E7D;
+  --success:#34C759; --warning:#FF9F0A; --danger:#FF453A;
+  --info:#007AFF; --gold:#FFD700;
+
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:36px;
+  --s7:56px; --s8:88px; --s9:132px;
+  --r-control:10px; --r-card:16px; --r-pill:999px;   /* از radius اپ */
+  --shell:1160px;
+  --tag-out:-46px;   /* چقدر تگ از لبهٔ قاب بیرون می‌زند */
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --t:220ms var(--ease);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:'Vazirmatn',system-ui,-apple-system,sans-serif;
+  font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;border:0;background:none}
+h1,h2,h3{margin:0;font-weight:700;line-height:1.14;letter-spacing:-.03em;text-wrap:balance}
+p{margin:0}
+ul{margin:0;padding:0;list-style:none}
+:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
+::selection{background:var(--brand);color:var(--bg)}
+
+.shell{width:100%;max-width:var(--shell);margin-inline:auto;padding-inline:var(--s5)}
+section{padding-block:var(--s9)}
+.label{display:block;font-size:11px;font-weight:600;letter-spacing:.2em;
+  color:var(--text-3);margin-bottom:var(--s5)}
+.h2{font-size:clamp(30px,4.4vw,54px)}
+.lede{color:var(--text-2);font-size:clamp(16px,1.7vw,19px);max-width:44ch;line-height:1.7}
+
+/* ─── Buttons ───────────────────────────────────────────────────────────────
+   متنِ دکمهٔ اصلی تیره است نه سفید، و این یک انتخاب دسترس‌پذیری است نه سلیقه:
+   سفید روی ‎#FF2D55‎ فقط ۳٫۶۵:۱ می‌دهد (زیر AA)، ولی ‎--bg‎ روی همان برند
+   ۵٫۴۳:۱ است. خودِ اپ سفید می‌گذارد چون آنجا لیبل درشت‌تر است.             */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
+  min-height:52px;padding-inline:var(--s6);border-radius:var(--r-pill);
+  font-weight:700;font-size:15.5px;white-space:nowrap;cursor:pointer;
+  transition:background var(--t),border-color var(--t),color var(--t),transform var(--t),box-shadow var(--t)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--brand);color:var(--bg);
+  box-shadow:0 10px 34px -14px rgba(255,45,85,.9)}
+.btn-primary:hover{background:var(--brand-2);box-shadow:0 16px 40px -14px rgba(255,45,85,1)}
+.btn-ghost{border:1px solid var(--border);color:var(--text);background:var(--surface)}
+.btn-ghost:hover{border-color:var(--divider);background:var(--raised)}
+.btn-sm{min-height:44px;font-size:14.5px;padding-inline:var(--s5)}
+
+/* ─── Nav ─── */
+.nav{position:sticky;top:0;z-index:80;background:rgba(10,10,11,.72);
+  backdrop-filter:blur(16px);border-bottom:1px solid transparent;
+  transition:border-color var(--t),background var(--t)}
+.nav.stuck{border-bottom-color:var(--border);background:rgba(10,10,11,.94)}
+.nav-in{display:flex;align-items:center;gap:var(--s6);min-height:74px}
+.logo{display:block;height:35px;width:auto}
+.nav-links{display:flex;gap:var(--s5);margin-inline-start:var(--s4)}
+.nav-links a{font-size:14.5px;color:var(--text-2);transition:color var(--t)}
+.nav-links a:hover{color:var(--text)}
+.nav-actions{margin-inline-start:auto;display:flex;align-items:center;gap:var(--s3)}
+.nav-toggle{display:none;width:44px;height:44px;border-radius:var(--r-control);
+  border:1px solid var(--border);place-items:center;cursor:pointer;color:var(--text)}
+.nav-panel{display:none;border-top:1px solid var(--border);background:var(--bg)}
+.nav-panel.open{display:block}
+.nav-panel a{display:block;padding:var(--s4) 0;color:var(--text-2);font-size:15px;
+  border-bottom:1px solid var(--border)}
+.nav-panel a:last-child{border-bottom:0}
+
+/* ─── 3D stage ──────────────────────────────────────────────────────────────
+   یک perspective برای هر stage. تگ‌ها روی translateZ واقعی می‌نشینند تا جلوی
+   شیشه شناور باشند، نه اینکه فقط رویش هم‌پوشانی کنند.                        */
+.stage{perspective:1400px;perspective-origin:50% 45%}
+.rig{transform-style:preserve-3d;will-change:transform;
+  transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) rotateZ(var(--rz,0deg)) translateZ(var(--tz,0px))}
+
+/* ورود لایه‌ای: ماکاپ از عمق می‌آید، بعد تگ‌ها stagger می‌شوند. یک بار، موقع فرود. */
+.js .stage .rig{opacity:0;transform:translateZ(-260px);
+  transition:opacity 760ms var(--ease),transform 760ms var(--ease)}
+.js .stage.in .rig{opacity:1;
+  transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) rotateZ(var(--rz,0deg)) translateZ(var(--tz,0px))}
+
+/* هالهٔ برند — مهم‌ترین جبران تم تیره: بدون این، بدنهٔ تیرهٔ گوشی در پس‌زمینه گم
+   می‌شود. ⚠️ فقط پشتِ قابِ CSS معنا دارد، جایی که اطرافِ گوشی واقعاً شفاف است.
+   پشتِ ماکاپ‌های مات (.render / .mockup) هالهٔ آن‌ها *داخل خودِ تصویر* پخته شده،
+   چون تصویر مات یک مستطیل از هالهٔ CSS می‌بُرد و درزش دیده می‌شد.            */
+/* بیرون‌زدگی فقط عمودی است: ‎-10%‎ افقی روی ۳۷۵px از لبهٔ viewport می‌زد بیرون و
+   کل سند را ۱۸px جابه‌جا می‌کرد (در RTL این خودش را به شکل اسکرول افقی نشان
+   می‌دهد). ستون همیشه از خودِ گوشی پهن‌تر است، پس هاله بدون بیرون‌زدن هم می‌رسد. */
+.halo{position:absolute;inset:-14% 0;pointer-events:none;z-index:0;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,45,85,.20),rgba(255,45,85,0) 72%);
+  filter:blur(28px)}
+
+/* ماکاپ‌های از پیش رندرشده: پس‌زمینه‌شان دقیقاً --bg است، پس لبهٔ مستطیل دیده
+   نمی‌شود و می‌شود بدون قاب CSS مستقیم روی صفحه نشست. */
+.render{position:relative;transform-style:preserve-3d;width:min(560px,100%)}
+.render img{width:100%;height:auto}
+
+/* قاب CSS برای اسکرین‌شات‌های تخت.
+   ‎#08080a‎ و ‎#000‎ توکن تم نیستند و عمداً خام‌اند: رنگ *سخت‌افزار* را می‌سازند
+   (بدنه و شیشهٔ خاموش)، نه رنگ رابط. با --bg یکی‌شان نکن، وگرنه گوشی در
+   پس‌زمینه حل می‌شود و قاب دیده نمی‌شود. */
+.phone{position:relative;transform-style:preserve-3d;
+  width:min(300px,74vw);border-radius:44px;padding:9px;background:#08080a;
+  box-shadow:0 2px 3px rgba(0,0,0,.5),0 30px 60px -25px rgba(0,0,0,.9),
+             0 60px 120px -40px rgba(0,0,0,.8),
+             0 0 0 1px var(--divider), inset 0 0 0 1px rgba(255,255,255,.07)}
+.phone-screen{position:relative;overflow:hidden;border-radius:36px;
+  aspect-ratio:560/1157;background:#000}
+.phone-screen img{width:100%;height:100%;object-fit:cover;object-position:50% 0}
+/* بازتاب نور روی شیشه — با تیلت جابه‌جا می‌شود (‎--gl‎ را اسکریپت ست می‌کند) */
+.phone::after{content:"";position:absolute;inset:9px;border-radius:36px;pointer-events:none;
+  background:linear-gradient(calc(205deg + var(--gl,0deg)),
+    rgba(255,255,255,.16),rgba(255,255,255,0) 42%)}
+
+/* ─── تگ‌های شناور — بودجهٔ متنِ این صفحه اینجا خرج می‌شود ─── */
+.tag{
+  position:absolute;z-index:5;display:inline-flex;align-items:center;gap:var(--s2);
+  background:var(--raised);color:var(--text);border:1px solid var(--divider);
+  padding:var(--s2) var(--s4);border-radius:var(--r-pill);
+  font-size:12.5px;font-weight:600;white-space:nowrap;
+  box-shadow:0 14px 30px -12px rgba(0,0,0,.9),0 2px 6px rgba(0,0,0,.5);
+  transform:translateZ(70px);
+  transition:opacity 520ms var(--ease),transform 520ms var(--ease);
+}
+.js .tag{opacity:0}
+.tag-s{inset-inline-start:var(--tag-out)}
+.tag-e{inset-inline-end:var(--tag-out)}
+.tag svg{color:var(--brand);flex:none}
+.js .tag.on{opacity:1}
+.tag-lo{transform:translateZ(42px)}
+/* روی ماکاپ‌های رندرشده تگ‌ها داخل کادر می‌مانند: بیرون‌زدگی روی ۳۷۵px اسکرول
+   افقی می‌ساخت، و عمق را translateZ می‌سازد نه بیرون‌زدن. */
+.render .tag{inset-inline-end:auto;inset-inline-start:auto}
+
+/* هالهٔ پخته‌شدهٔ ماکاپ ~۱۳٪ حاشیهٔ خالی دور تصویر گذاشته؛ اگر تگ‌ها مثل قابِ
+   CSS بیرون بزنند، یک وجب از خودِ گوشی فاصله می‌گیرند. اینجا داخل می‌نشینند. */
+.mockup-wrap{position:relative;width:min(360px,84vw);justify-self:center;--tag-out:4px}
+.mockup{width:100%;height:auto;display:block;
+  animation:mockFloat 7s ease-in-out infinite}
+@keyframes mockFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-12px) rotate(-.6deg)}}
+.tag-flat{transform:none}   /* ماکاپ پخته عمق خودش را دارد — translateZ لازم ندارد */
+
+/* ─── Hero ─── */
+.hero{position:relative;padding-block:var(--s7) var(--s9);overflow:hidden}
+.blob{position:absolute;border-radius:50%;pointer-events:none;filter:blur(60px);z-index:0;
+  will-change:transform}
+.blob-1{width:620px;height:620px;inset-block-start:-16%;inset-inline-end:-12%;
+  background:radial-gradient(circle,rgba(255,45,85,.26),transparent 62%)}
+.blob-2{width:520px;height:520px;inset-block-end:-22%;inset-inline-start:-14%;
+  background:radial-gradient(circle,rgba(255,159,10,.13),transparent 62%)}
+.hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:1fr .95fr;
+  gap:var(--s7);align-items:center}
+.hero h1{font-size:clamp(38px,5.4vw,70px);line-height:1.04;margin-bottom:var(--s5)}
+.hero h1 em{font-style:normal;color:var(--brand)}
+.hero-cta{display:flex;gap:var(--s3);flex-wrap:wrap;margin-top:var(--s6)}
+.beta{display:inline-flex;align-items:center;gap:var(--s2);font-size:12px;font-weight:600;
+  color:var(--text-2);background:var(--surface);border:1px solid var(--border);
+  padding:var(--s1) var(--s4);border-radius:var(--r-pill);margin-bottom:var(--s5)}
+.beta i{width:6px;height:6px;border-radius:50%;background:var(--brand);font-style:normal;
+  box-shadow:0 0 0 4px rgba(255,45,85,.2)}
+.hero-stage{justify-self:center;position:relative}
+
+/* ─── Feature rows ─── */
+.row{display:grid;grid-template-columns:1fr 1fr;gap:var(--s7);align-items:center}
+.row + .row{margin-top:var(--s9)}
+.row-flip .row-media{order:-1}
+.row-copy h2{font-size:clamp(26px,3.4vw,42px);margin-bottom:var(--s4)}
+.row-copy p{color:var(--text-2);font-size:17px;max-width:38ch}
+.row-media{justify-self:center;position:relative;width:100%;display:grid;justify-items:center}
+.chiplist{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s5)}
+.chip{display:inline-flex;align-items:center;gap:var(--s2);font-size:13px;font-weight:500;
+  color:var(--text-2);background:var(--surface);border:1px solid var(--border);
+  padding:var(--s2) var(--s4);border-radius:var(--r-pill)}
+.chip svg{color:var(--brand)}
+
+/* ─── Beta strip ────────────────────────────────────────────────────────────
+   قبلاً «پنل وارونه» بود چون صفحه روشن بود. حالا که همه‌چیز تیره است، جداشدن
+   از راه سطحِ بالاتر + لبهٔ کهربایی می‌آید، نه از راه معکوس‌کردن رنگ.        */
+.strip{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-card);padding:var(--s7);position:relative;overflow:hidden;
+  display:grid;gap:var(--s4);justify-items:center;text-align:center}
+.strip::before{content:"";position:absolute;inset-block-start:0;inset-inline:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--warning),transparent)}
+.strip h2{font-size:clamp(22px,2.8vw,32px)}
+.strip p{color:var(--text-2);max-width:54ch;font-size:16px}
+.soon{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;
+  color:var(--warning);background:rgba(255,159,10,.12);border:1px solid rgba(255,159,10,.32);
+  padding:1px var(--s3);border-radius:var(--r-pill)}
+
+/* ─── Seller ─── */
+.seller{position:relative;overflow:hidden;border-radius:var(--r-card);
+  border:1px solid var(--border);background:var(--surface);padding:var(--s8) var(--s6);
+  display:grid;gap:var(--s5);justify-items:center;text-align:center}
+.seller::before{content:"";position:absolute;inset-block-start:-70%;inset-inline-start:50%;
+  width:640px;height:640px;margin-inline-start:-320px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,45,85,.20),transparent 62%);filter:blur(40px)}
+.seller > *{position:relative;z-index:1}
+.seller .lede{margin-inline:auto}
+
+/* ─── Download ─── */
+.dl{display:grid;justify-items:center;text-align:center;gap:var(--s6)}
+.stores{display:flex;gap:var(--s3);flex-wrap:wrap;justify-content:center}
+.store{display:flex;align-items:center;gap:var(--s3);min-height:60px;padding-inline:var(--s6);
+  border-radius:var(--r-control);border:1px solid var(--border);text-align:start;
+  background:var(--surface);color:var(--text);
+  transition:border-color var(--t),transform var(--t),box-shadow var(--t)}
+.store b{font-size:15px;font-weight:600;display:block}
+.store small{display:block;font-size:11px;color:var(--text-3);line-height:1.5}
+.store-live{border-color:var(--brand);box-shadow:0 10px 30px -18px rgba(255,45,85,.9)}
+.store-live:hover{transform:translateY(-2px);box-shadow:0 16px 36px -16px rgba(255,45,85,1)}
+.store-soon{background:transparent;color:var(--text-3);cursor:not-allowed}
+.store-soon b{color:var(--text-2)}
+.store-soon svg{color:var(--text-3)}
+
+/* راهنمای نصب PWA — راهنماست نه تبلیغ، پس کم‌رنگ و کوچک می‌ماند */
+.a2hs{display:flex;gap:var(--s5);flex-wrap:wrap;justify-content:center;
+  font-size:13px;color:var(--text-3);max-width:60ch}
+.a2hs div{display:flex;align-items:center;gap:var(--s2)}
+.a2hs b{color:var(--text-2);font-weight:600}
+.a2hs svg{color:var(--text-3);flex:none}
+
+/* ─── Footer ─── */
+footer{border-top:1px solid var(--border);padding-block:var(--s7) var(--s6)}
+.foot{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s7);flex-wrap:wrap}
+.foot-links{display:flex;gap:var(--s6);flex-wrap:wrap}
+.foot-links a{color:var(--text-3);font-size:14px;transition:color var(--t)}
+.foot-links a:hover{color:var(--text)}
+.foot-end{margin-top:var(--s7);color:var(--text-3);font-size:13px;
+  display:flex;justify-content:space-between;gap:var(--s4);flex-wrap:wrap}
+
+/* ─── Scroll reveal ─── */
+.rv{transition:opacity 620ms var(--ease),transform 620ms var(--ease)}
+.js .rv{opacity:0;transform:translateY(18px)}
+.js .rv.in{opacity:1;transform:none}
+
+/* ─── Responsive ─── */
+@media (max-width:960px){
+  .hero-grid,.row{grid-template-columns:1fr;gap:var(--s7)}
+  .row-flip .row-media{order:0}
+  .row-copy p{max-width:none}
+  .nav-links{display:none}
+  .nav-toggle{display:grid}
+  .stage{perspective:1000px}
+}
+@media (max-width:640px){
+  :root{--s9:84px;--s8:56px;--s7:40px;--tag-out:-10px}
+  .shell{padding-inline:var(--s4)}
+  .phone{width:min(268px,72vw)}
+  .tag{font-size:11.5px;padding:6px var(--s3)}
+  .seller{padding:var(--s7) var(--s4)}
+  .strip{padding:var(--s6) var(--s4)}
+  .stores{width:100%}
+  .store{width:100%}
+  .logo{height:30px}
+  .nav-hide-sm{display:none}
+  .a2hs{flex-direction:column;gap:var(--s3);align-items:center}
+}
+/* لوگو + دکمه + همبرگر روی ۳۲۰px (SE قدیمی) در یک خط جا نمی‌شدند و nav را
+   بیرون می‌زدند. فقط فشرده می‌شوند — هیچ‌کدام حذف نمی‌شود. */
+@media (max-width:400px){
+  .logo{height:26px}
+  .btn-sm{padding-inline:var(--s4);font-size:13.5px;min-height:42px}
+  .nav-in{gap:var(--s3);min-height:64px}
+  .nav-actions{gap:var(--s2)}
+  .nav-toggle{width:42px;height:42px}
+}
+/* موشن اینجا تزئین است؛ هر حالت نهایی بدون آن هم قابل‌دسترس می‌ماند. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;
+    scroll-behavior:auto!important}
+  .js .rv{opacity:1;transform:none}
+  .js .tag{opacity:1;transform:translateZ(0)}
+  .rig,.js .stage .rig{transform:none!important;opacity:1}
+  .blob{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ تعریف یک‌بارهٔ لوگو و آیکون‌ها؛ همه‌جا با <use> صدا زده می‌شوند ═══ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+ <defs>
+  <g id="flow-strokes">
+   <!-- f — قلاب -->
+   <path d="M 34,18 Q 34,8 26,8 Q 18,8 18,20 L 18,56"/>
+   <!-- f — خط افقی -->
+   <path d="M 10,32 L 30,32"/>
+   <!-- l — صعودی ساده -->
+   <path d="M 52,8 L 52,56"/>
+   <!-- o — دایرهٔ کامل، مرکز (84,43)، شعاع ۱۳ -->
+   <path d="M 97,43 A 13,13 0 0,1 71,43 A 13,13 0 0,1 97,43 Z"/>
+   <!-- w — چهار بِزیهٔ مکعبی، کاملاً نرم بدون گوشهٔ تیز -->
+   <path d="M 117,30 C 121,48 128,56 132,56 C 136,56 141,40 146,40 C 151,40 156,56 160,56 C 164,56 167,48 171,30"/>
+   <!-- . — نقطه، شعاع ۵، کف روی خط پایه -->
+   <path d="M 200,46 A 5,5 0 0,1 200,56 A 5,5 0 0,1 200,46 Z"/>
+  </g>
+ </defs>
+ <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.2 9h17.6M3.2 15h17.6"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18Z"/></symbol>
+ <symbol id="i-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4H6Z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></symbol>
+ <symbol id="i-star" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8L12 3.5Z"/></symbol>
+ <symbol id="i-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a7.5 7.5 0 0 1-10.9 6.7L4 20l1.8-5.1A7.5 7.5 0 1 1 21 11.5Z"/></symbol>
+ <symbol id="i-verified" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2.2 14.3 4l2.8-.3 1 2.7 2.4 1.5-.9 2.7.9 2.7-2.4 1.5-1 2.7-2.8-.3L12 21.8 9.7 20l-2.8.3-1-2.7-2.4-1.5.9-2.7-.9-2.7 2.4-1.5 1-2.7 2.8.3L12 2.2Z"/><path d="m8.6 12 2.2 2.2 4.4-4.4" fill="none" stroke="#0A0A0B" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+ <symbol id="i-heart" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 20.5S3.5 15.2 3.5 9.6A4.6 4.6 0 0 1 12 7a4.6 4.6 0 0 1 8.5 2.6c0 5.6-8.5 10.9-8.5 10.9Z"/></symbol>
+ <symbol id="i-user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="3.6"/><path d="M3 20a7 7 0 0 1 12.2-4.7"/><path d="M18 15v6M15 18h6"/></symbol>
+ <symbol id="i-ruler" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="20" height="8" rx="2"/><path d="M7 8v3M12 8v4M17 8v3"/></symbol>
+ <symbol id="i-ticket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v2a2.2 2.2 0 0 0 0 4.4v1.6A1.5 1.5 0 0 1 19.5 18h-15A1.5 1.5 0 0 1 3 16.5v-1.6a2.2 2.2 0 0 0 0-4.4v-2Z"/><path d="M14 7v11"/></symbol>
+ <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 1 0-14 0c0 5.4 7 11 7 11Z"/><circle cx="12" cy="10" r="2.6"/></symbol>
+ <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+ <symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5 9 10l4 4 7.5-8"/><path d="M15 6h5.5v5.5"/></symbol>
+ <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H18a2 2 0 0 1 2 2v1"/><path d="M3 7.5V17a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2.5"/><path d="M21 9.5v5h-4a2.5 2.5 0 0 1 0-5h4Z"/></symbol>
+ <symbol id="i-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.2-2h8.2l1.2 2h2.2A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5v-9Z"/><circle cx="12" cy="12.5" r="3.4"/></symbol>
+ <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+ <symbol id="i-share-ios" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m8.5 6.5 3.5-3.5 3.5 3.5"/><path d="M6 11H4.5A1.5 1.5 0 0 0 3 12.5v7A1.5 1.5 0 0 0 4.5 21h15a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 19.5 11H18"/></symbol>
+ <symbol id="i-dots" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></symbol>
+ <symbol id="i-apple" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.9-3.6.9-.7 0-1.9-.8-3.1-.8-1.6 0-3.1.9-3.9 2.4-1.7 2.9-.4 7.2 1.2 9.5.8 1.1 1.7 2.4 3 2.4 1.2 0 1.6-.8 3.1-.8 1.4 0 1.8.8 3.1.7 1.3 0 2.1-1.1 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.6-1-2.6-4ZM14.1 5.4c.7-.8 1.1-2 1-3.2-1 0-2.3.7-3 1.5-.6.7-1.2 1.9-1 3.1 1.1.1 2.3-.6 3-1.4Z"/></symbol>
+ <symbol id="i-play-store" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M3.6 2.4a1.5 1.5 0 0 0-.6 1.2v16.8a1.5 1.5 0 0 0 .6 1.2l9-9.6-9-9.6Z"/><path d="m14.9 14.5-9.4 6.9 8.3-4.8 1.1-2.1Z" opacity=".8"/><path d="m14.9 9.5-1.1-2.1L5.5 2.6l9.4 6.9Z" opacity=".8"/><path d="m16.3 10.3 3.2 1.9c.7.4.7 1.2 0 1.6l-3.2 1.9-1.7-2.7 1.7-2.7Z" opacity=".65"/></symbol>
+</svg>
+
+<header class="nav" id="nav">
+  <div class="shell nav-in">
+    <a href="#" aria-label="flow — صفحهٔ اصلی">
+      <svg class="logo" width="104" height="35" viewBox="0 0 228 76" aria-hidden="true" focusable="false">
+        <use href="#flow-strokes" transform="translate(16, 8) skewX(-5)" fill="none" stroke="rgba(0,0,0,0.38)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+        <use href="#flow-strokes" transform="translate(12, 4) skewX(-5)" fill="none" stroke="#000000" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+        <use href="#flow-strokes" transform="translate(12, 4) skewX(-5)" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <nav class="nav-links" aria-label="ناوبری اصلی">
+      <a href="#features">قابلیت‌ها</a>
+      <a href="#seller">فروشنده شو</a>
+      <a href="#download">دریافت</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn btn-primary btn-sm" data-app-link href="https://app.example.com/">
+        <svg width="16" height="16" aria-hidden="true"><use href="#i-globe"/></svg>
+        نسخهٔ وب
+      </a>
+      <button class="nav-toggle" id="navToggle" type="button" aria-label="باز کردن منو"
+              aria-expanded="false" aria-controls="navPanel">
+        <svg width="22" height="22" aria-hidden="true"><use href="#i-menu"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="nav-panel" id="navPanel">
+    <nav class="shell" aria-label="ناوبری موبایل">
+      <a href="#features">قابلیت‌ها</a>
+      <a href="#seller">فروشنده شو</a>
+      <a href="#download">دریافت</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ═══ Hero ═══ -->
+<section class="hero">
+  <span class="blob blob-1" data-par="0.06" aria-hidden="true"></span>
+  <span class="blob blob-2" data-par="-0.04" aria-hidden="true"></span>
+  <div class="shell hero-grid">
+    <div>
+      <span class="beta"><i aria-hidden="true"></i> نسخهٔ بتا</span>
+      <h1>ببین. بپسند. <em>بخر.</em></h1>
+      <p class="lede">هر محصول، عکس واقعی از فروشندهٔ واقعی.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" data-app-link href="https://app.example.com/">باز کردن flow</a>
+        <a class="btn btn-ghost" href="#features">قابلیت‌ها</a>
+      </div>
+    </div>
+
+    <div class="hero-stage stage">
+      <div class="rig" id="heroRig" data-pointer="1" data-tilt="-6" style="--ry:-6deg;--rx:3deg">
+        <div class="render">
+          <img src="img/hero-feed.jpg" width="1180" height="1240" fetchpriority="high" decoding="async"
+               alt="فید flow روی گوشی: پست یک کت با قیمت، دکمهٔ خرید و امتیاز فروشنده؛ پشت آن پنل فروشنده">
+          <span class="tag" style="inset-block-start:13%;inset-inline-end:15%" data-d="0">
+            <svg width="14" height="14" aria-hidden="true"><use href="#i-bag"/></svg> خرید مستقیم از پست
+          </span>
+          <span class="tag tag-lo" style="inset-block-start:44%;inset-inline-end:10%" data-d="140">
+            <svg width="14" height="14" aria-hidden="true"><use href="#i-star"/></svg> امتیاز واقعی فروشنده
+          </span>
+          <span class="tag" style="inset-block-end:16%;inset-inline-end:20%" data-d="280">
+            <svg width="14" height="14" aria-hidden="true"><use href="#i-chat"/></svg> چت با فروشنده
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Features ═══ -->
+<section id="features">
+  <div class="shell">
+    <span class="label rv">قابلیت‌ها</span>
+
+    <div class="row">
+      <div class="row-copy rv">
+        <h2>فروشگاه هر فروشنده.</h2>
+        <p>هویت تأییدشده، امتیاز واقعی، و همهٔ محصولات در یک صفحه.</p>
+        <div class="chiplist">
+          <span class="chip"><svg width="14" height="14" aria-hidden="true"><use href="#i-verified"/></svg> فروشندهٔ تأییدشده</span>
+          <span class="chip"><svg width="14" height="14" aria-hidden="true"><use href="#i-user-plus"/></svg> دنبال‌کردن</span>
+          <span class="chip"><svg width="14" height="14" aria-hidden="true"><use href="#i-heart"/></svg> نظر خریداران</span>
+        </div>
+      </div>
+      <div class="row-media stage">
+        <span class="halo" aria-hidden="true"></span>
+        <div class="rig" data-tilt="14">
+          <div class="phone">
+            <div class="phone-screen">
+              <img src="img/seller-shop.jpg" width="560" height="1213" loading="lazy" decoding="async"
+                   alt="صفحهٔ فروشگاه فروشنده در flow: نشان هویت تأییدشده، امتیاز ۳٫۵ و شبکهٔ محصولات">
+            </div>
+            <span class="tag tag-e" style="inset-block-start:20%" data-d="0">
+              <svg width="14" height="14" aria-hidden="true"><use href="#i-verified"/></svg> هویت تأییدشده
+            </span>
+            <span class="tag tag-lo tag-s" style="inset-block-end:24%" data-d="160">
+              <svg width="14" height="14" aria-hidden="true"><use href="#i-bag"/></svg> همهٔ محصولات
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row row-flip">
+      <div class="row-copy rv">
+        <h2>سبد خرید، بدون دایرکت.</h2>
+        <p>سایز و رنگ را انتخاب کن، آدرس بده، سفارش ثبت شود.</p>
+        <div class="chiplist">
+          <span class="chip"><svg width="14" height="14" aria-hidden="true"><use href="#i-ruler"/></svg> سایز و رنگ</span>
+          <span class="chip"><svg width="14" height="14" aria-hidden="true"><use href="#i-ticket"/></svg> کد تخفیف</span>
+          <span class="chip"><svg width="14" height="14" aria-hidden="true"><use href="#i-pin"/></svg> ارسال به آدرس</span>
+        </div>
+      </div>
+      <div class="row-media stage">
+        <div class="rig" data-tilt="-12">
+          <div class="render">
+            <img src="img/order-flow.jpg" width="1179" height="1240" loading="lazy" decoding="async"
+                 alt="صفحهٔ محصول در flow: قیمت، افزودن به سبد و خرید فوری؛ پشت آن انتخاب آدرس روی نقشه">
+            <span class="tag" style="inset-block-start:16%;inset-inline-end:14%" data-d="0">
+              <svg width="14" height="14" aria-hidden="true"><use href="#i-ruler"/></svg> انتخاب سایز و رنگ
+            </span>
+            <span class="tag tag-lo" style="inset-block-end:18%;inset-inline-end:12%" data-d="160">
+              <svg width="14" height="14" aria-hidden="true"><use href="#i-pin"/></svg> ارسال به آدرس ذخیره‌شده
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="row-copy rv">
+        <h2>پنل فروشنده.</h2>
+        <p>ببین هر پست چند بازدید گرفت و چند تا از آن‌ها به سفارش رسید.</p>
+        <div class="chiplist">
+          <span class="chip"><svg width="14" height="14" aria-hidden="true"><use href="#i-eye"/></svg> بازدید هر پست</span>
+          <span class="chip"><svg width="14" height="14" aria-hidden="true"><use href="#i-trend"/></svg> از بازدید تا فروش</span>
+          <span class="chip"><svg width="14" height="14" aria-hidden="true"><use href="#i-wallet"/></svg> درآمد</span>
+        </div>
+      </div>
+      <div class="row-media">
+        <div class="mockup-wrap rv">
+          <img class="mockup" src="img/seller-panel.jpg" width="689" height="900" loading="lazy" decoding="async"
+               alt="پنل آنالیز فروشنده در flow: مجموع بازدید، روند هفتگی و درآمد کل">
+          <span class="tag tag-flat tag-e" style="inset-block-start:19%" data-d="0">
+            <svg width="14" height="14" aria-hidden="true"><use href="#i-trend"/></svg> از بازدید تا فروش
+          </span>
+          <span class="tag tag-flat tag-lo tag-s" style="inset-block-end:17%" data-d="160">
+            <svg width="14" height="14" aria-hidden="true"><use href="#i-wallet"/></svg> درآمد
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Beta reality check — با VIDEO_UPLOAD_ENABLED / PAYMENTS_ENABLED می‌خواند ═══
+     ⚠️ اینجا هیچ ادعایی دربارهٔ «خرید امن»، escrow یا بلوکه‌شدن پول نوشته نمی‌شود.
+     escrow ساخته شده ولی خاموش است؛ پول واقعاً کارت‌به‌کارت جابه‌جا می‌شود.
+     روزی که PAYMENTS_ENABLED=true شد، آن روز این متن عوض می‌شود — نه امروز. -->
+<section>
+  <div class="shell">
+    <div class="strip rv">
+      <svg width="26" height="26" style="color:var(--warning)" aria-hidden="true"><use href="#i-camera"/></svg>
+      <h2>در بتا، پست‌ها با عکس منتشر می‌شوند.</h2>
+      <p>انتشار ویدیو <span class="soon">به‌زودی</span> و پرداخت درون‌اپ <span class="soon">به‌زودی</span> فعال می‌شوند. فعلاً پرداخت مستقیم بین خریدار و فروشنده انجام می‌شود.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Seller ═══ -->
+<section id="seller">
+  <div class="shell">
+    <div class="seller rv">
+      <span class="label">برای فروشنده‌ها</span>
+      <h2 class="h2">یک عکس بگیر. فروشگاهت باز است.</h2>
+      <p class="lede">ثبت‌نام رایگان، بدون حق اشتراک.</p>
+      <a class="btn btn-primary" data-app-link href="https://app.example.com/">شروع فروش</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ Download ═══ -->
+<section id="download">
+  <div class="shell dl rv">
+    <h2 class="h2">flow را باز کن.</h2>
+    <div class="stores">
+      <a class="store store-live" data-app-link href="https://app.example.com/">
+        <svg width="24" height="24" aria-hidden="true"><use href="#i-globe"/></svg>
+        <span><small>بدون نصب، همین حالا</small><b>نسخهٔ وب</b></span>
+      </a>
+      <span class="store store-soon" aria-disabled="true">
+        <svg width="24" height="24" aria-hidden="true"><use href="#i-apple"/></svg>
+        <span><small>دریافت از</small><b>App Store <span class="soon">به‌زودی</span></b></span>
+      </span>
+      <span class="store store-soon" aria-disabled="true">
+        <svg width="24" height="24" aria-hidden="true"><use href="#i-play-store"/></svg>
+        <span><small>دریافت از</small><b>Google Play <span class="soon">به‌زودی</span></b></span>
+      </span>
+    </div>
+    <div class="a2hs">
+      <div><svg width="15" height="15" aria-hidden="true"><use href="#i-share-ios"/></svg>
+        <span><b>iOS:</b> دکمهٔ اشتراک‌گذاری ← Add to Home Screen</span></div>
+      <div><svg width="15" height="15" aria-hidden="true"><use href="#i-dots"/></svg>
+        <span><b>اندروید:</b> منوی سه‌نقطه ← افزودن به صفحهٔ اصلی</span></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="shell">
+    <div class="foot">
+      <div>
+        <svg class="logo" width="122" height="41" viewBox="0 0 228 76" role="img" aria-label="flow">
+          <use href="#flow-strokes" transform="translate(16, 8) skewX(-5)" fill="none" stroke="rgba(0,0,0,0.38)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+          <use href="#flow-strokes" transform="translate(12, 4) skewX(-5)" fill="none" stroke="#000000" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+          <use href="#flow-strokes" transform="translate(12, 4) skewX(-5)" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <!-- «راهنما»، «حریم خصوصی» و آیکون‌های شبکهٔ اجتماعی حذف شدند: همه href="#"
+           بودند. لینک مرده روی سایت عمومی از نبودِ لینک بدتر است. وقتی صفحه یا
+           اکانت واقعی وجود داشت، همین‌جا برگردانده می‌شود. -->
+      <nav class="foot-links" aria-label="پیوندهای پاورقی">
+        <a data-app-link href="https://app.example.com/">نسخهٔ وب</a>
+        <a href="#features">قابلیت‌ها</a>
+        <a href="#seller">فروشنده شو</a>
+        <a href="#download">دریافت</a>
+      </nav>
+    </div>
+    <div class="foot-end">
+      <span>© ۱۴۰۵ flow</span>
+      <span>ساخته‌شده در ایران</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // 🔴 تنها جایی که نشانی نسخهٔ وب تعریف می‌شود. عوض‌کردنش یک‌جاست نه پنج‌جا.
+  //    href داخل HTML همین مقدار را دارد تا صفحه بدون جاوااسکریپت هم کار کند؛
+  //    این حلقه فقط وقتی معنا دارد که مقدار HTML عقب مانده باشد.
+  var APP_URL = 'https://app.example.com/';
+  document.querySelectorAll('[data-app-link]').forEach(function(a){ a.href = APP_URL; });
+
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var nav = document.getElementById('nav');
+  var onNav = function(){ nav.classList.toggle('stuck', window.scrollY > 8); };
+  addEventListener('scroll', onNav, {passive:true}); onNav();
+
+  // منوی موبایل — دکمه قبلاً هیچ کاری نمی‌کرد و عملاً یک تلهٔ فوکوس بود
+  var tgl = document.getElementById('navToggle'), panel = document.getElementById('navPanel');
+  tgl.addEventListener('click', function(){
+    var open = panel.classList.toggle('open');
+    tgl.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  panel.addEventListener('click', function(e){
+    if (e.target.tagName === 'A'){ panel.classList.remove('open'); tgl.setAttribute('aria-expanded','false'); }
+  });
+
+  var revealables = document.querySelectorAll('.rv, .stage, .mockup-wrap');
+  if (reduce || !('IntersectionObserver' in window)) {
+    revealables.forEach(function(el){ el.classList.add('in'); });
+    document.querySelectorAll('.tag').forEach(function(t){ t.classList.add('on'); });
+    return;
+  }
+
+  // reveal، و stagger شدن تگ‌های هر stage بعد از اینکه ماکاپش فرود آمد
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (!e.isIntersecting) return;
+      e.target.classList.add('in');
+      e.target.querySelectorAll('.tag').forEach(function(t){
+        setTimeout(function(){ t.classList.add('on'); }, 640 + (+t.dataset.d || 0));
+      });
+      io.unobserve(e.target);
+    });
+  }, {rootMargin:'0px 0px -8% 0px', threshold:0.15});
+  revealables.forEach(function(el){ io.observe(el); });
+
+  // ── 3D: تیلت وابسته به اسکرول + پارالاکس بلاب، یک rAF برای کل صفحه ──
+  var rigs = [].slice.call(document.querySelectorAll('.rig[data-tilt]'));
+  var blobs = [].slice.call(document.querySelectorAll('.blob[data-par]'));
+  var pointerRig = null;          // hero وقتی موس دستش را گرفته از این حلقه کنار می‌رود
+  var ticking = false;
+
+  function frame(){
+    ticking = false;
+    var vh = innerHeight, mid = vh / 2;
+    rigs.forEach(function(rig){
+      if (rig === pointerRig) return;
+      var r = rig.getBoundingClientRect();
+      if (r.bottom < -200 || r.top > vh + 200) return;   // کار خارج از viewport انجام نشود
+      var p = (mid - (r.top + r.height / 2)) / vh;        // ‎-1..1‎ در طول viewport
+      p = Math.max(-1, Math.min(1, p));
+      var base = +rig.dataset.tilt || 0;
+      var ry = base * (1 - Math.abs(p)) * 0.9 + base * 0.1;
+      rig.style.setProperty('--ry', ry.toFixed(2) + 'deg');
+      rig.style.setProperty('--rx', (p * 5).toFixed(2) + 'deg');
+      rig.style.setProperty('--rz', (p * -1.4).toFixed(2) + 'deg');
+      rig.style.setProperty('--gl', (ry * 2.4).toFixed(1) + 'deg');
+    });
+    blobs.forEach(function(b){
+      b.style.transform = 'translate3d(0,' + (scrollY * (+b.dataset.par)).toFixed(1) + 'px,0)';
+    });
+  }
+  function onScroll(){ if (!ticking){ ticking = true; requestAnimationFrame(frame); } }
+  addEventListener('scroll', onScroll, {passive:true});
+  addEventListener('resize', onScroll);
+  frame();
+
+  // ── 3D: تیلت با موس فقط روی hero — دامنهٔ کم، با میرایی، روی لمسی خاموش ──
+  var hero = document.querySelector('[data-pointer]');
+  if (hero && matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    var stage = hero.closest('.stage'), raf = null;
+    var tx = 0, ty = 0, cx = 0, cy = 0, idle = 0;
+    var MAX = 8;                                    // سقف ۸ درجه — نُدج، نه چرخش
+    function loop(){
+      cx += (tx - cx) * 0.09;                       // میرایی: حرکت نرم می‌ماند
+      cy += (ty - cy) * 0.09;
+      hero.style.setProperty('--ry', (-6 + cx * -MAX).toFixed(2) + 'deg');
+      hero.style.setProperty('--rx', (3 + cy * (MAX * 0.7)).toFixed(2) + 'deg');
+      hero.style.setProperty('--gl', ((-6 + cx * -MAX) * 2.4).toFixed(1) + 'deg');
+      if (Math.abs(tx - cx) > 0.002 || Math.abs(ty - cy) > 0.002) { raf = requestAnimationFrame(loop); }
+      else { raf = null; if (idle) { pointerRig = null; onScroll(); } }
+    }
+    function kick(){ if (!raf) raf = requestAnimationFrame(loop); }
+    stage.addEventListener('pointermove', function(e){
+      if (e.pointerType === 'touch') return;
+      var r = stage.getBoundingClientRect();
+      tx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width - 0.5) * 2));
+      ty = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height - 0.5) * 2));
+      idle = 0; pointerRig = hero; kick();
+    });
+    stage.addEventListener('pointerleave', function(){ tx = 0; ty = 0; idle = 1; kick(); });
+  }
+})();
+</script>
+</body>
+</html>
